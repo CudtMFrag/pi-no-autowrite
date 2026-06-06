@@ -1,16 +1,93 @@
 # pi-no-autowrite
 
-Pi extension：拦截 `write`/`edit` 工具调用，双模式。
+Pi extension: intercepts `write`/`edit` tool calls with two modes.
 
-> ⚠️ **个人自用插件**。公开发布仅为多设备同步和npm发布尝试，不保证通用性。
+> ⚠️ **Personal-use plugin.** Published solely for multi-device sync and npm publishing experimentation. No guarantees of generality.
 
-## 安装
+[English](#english) | [中文](#中文)
+
+---
+
+<a name="english"></a>
+## 🇬🇧 English
+
+### Installation
 
 ```bash
 pi install npm:pi-no-autowrite
 ```
 
-## 两种模式
+### Two Modes
+
+| | education | supervisor |
+|---|---|---|
+| write/edit | **Hard block**, returns guidance for AI to teach you to hand-write | **Allows**, only shows a hint suggesting delegation to sub-agent |
+| system prompt | Unchanged | **Injects supervisor instructions**, telling AI it's a supervisor not an implementer |
+| mindset | You want to write code yourself, AI as teacher | You want AI to do the work but don't want context polluted by large code output |
+
+Core difference: **whether tool calls are actually blocked**. Education blocks. Supervisor always allows — it only shifts AI behavior through system prompt injection.
+
+### Commands
+
+```
+/no-autowrite                  Toggle on/off
+/no-autowrite mode <name>      Switch mode (education|supervisor), auto-enables
+/no-autowrite on               Enable
+/no-autowrite off              Disable
+/no-autowrite status           Show status
+/no-autowrite show             Show interception rules for current mode
+```
+
+### Technical Implementation
+
+Three core mechanisms:
+
+#### 1. `tool_call` hook — intercept write/edit
+
+Registers `pi.on("tool_call")`, matching `toolName === "write" || "edit"`.
+
+- **education**: returns `{ block: true, reason: "..." }`, blocking the call and instructing AI to guide the user instead
+- **supervisor**: shows a `notify` hint then returns `undefined`, allowing the call
+
+#### 2. `before_agent_start` hook — inject system prompt
+
+Active only in supervisor mode. Before AI starts, appends supervisor role definition to `event.systemPrompt`:
+
+- Role: **supervisor**, not implementer
+- Rules: heavy coding → delegate via `Agent` tool + `run_in_background: true`
+- Light tasks (TODOs, comments, config, short snippets) → write/edit directly
+- Use `get_subagent_result` to retrieve results and report back
+
+This nudges AI toward delegation rather than direct implementation — but it's **non-enforcing**, just a soft prompt-level steer.
+
+#### 3. session entry — state persistence
+
+Toggle state and mode are persisted via `pi.appendEntry("no-autowrite-state", { mode, enabled })` into the session file, restored from the most recent entry on next startup. State survives project switches.
+
+### Motivation
+
+Two conflicting needs when using pi daily:
+- Sometimes you want to write code yourself — AI should only explain, not touch files
+- Sometimes you want AI to go all out — but don't want the main session context flooded with code output
+
+This plugin is the quick toggle between those two modes.
+
+### License
+
+MIT
+
+---
+
+<a name="中文"></a>
+## 🇨🇳 中文
+
+### 安装
+
+```bash
+pi install npm:pi-no-autowrite
+```
+
+### 两种模式
 
 | | education | supervisor |
 |---|---|---|
@@ -20,7 +97,7 @@ pi install npm:pi-no-autowrite
 
 两者本质区别：**是否真的阻止工具调用**。education 直接 block，supervisor 永远放行——只是通过 system prompt 改变 AI 的行为倾向。
 
-## 命令
+### 命令
 
 ```
 /no-autowrite                  切换开关
@@ -31,18 +108,18 @@ pi install npm:pi-no-autowrite
 /no-autowrite show             查看当前拦截规则
 ```
 
-## 技术实现
+### 技术实现
 
 三个核心机制：
 
-### 1. `tool_call` hook — 拦截 write/edit
+#### 1. `tool_call` hook — 拦截 write/edit
 
 注册 `pi.on("tool_call")`，匹配 `toolName === "write" || "edit"`。
 
 - **education**：返回 `{ block: true, reason: "..." }`，阻止本次调用，并提示 AI 改为指导用户
 - **supervisor**：弹出 `notify` 提醒后返回 `undefined`，放行
 
-### 2. `before_agent_start` hook — 注入 system prompt
+#### 2. `before_agent_start` hook — 注入 system prompt
 
 仅 supervisor 模式生效。在 AI 启动前，向 `event.systemPrompt` 尾部追加 supervisor 角色定义：
 
@@ -53,11 +130,11 @@ pi install npm:pi-no-autowrite
 
 这让 AI 在行为上更倾向委托而非亲自写——但**不强制**，只是一个 prompt 层面的软引导。
 
-### 3. session entry — 状态持久化
+#### 3. session entry — 状态持久化
 
 开关状态和当前模式通过 `pi.appendEntry("no-autowrite-state", { mode, enabled })` 写入 session，下次启动时从最近的 entry 恢复。切换项目后状态不丢失。
 
-## 开发动机
+### 开发动机
 
 日常使用 pi 时有两种矛盾需求：
 - 有时想自己动手写代码，希望 AI 只解释思路不动文件
@@ -65,6 +142,6 @@ pi install npm:pi-no-autowrite
 
 这个插件就是在这两种需求间切换的快捷键。
 
-## License
+### License
 
 MIT
