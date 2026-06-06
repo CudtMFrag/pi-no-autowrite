@@ -1,11 +1,12 @@
 {
   "name": "pi-no-autowrite",
-  "version": "1.0.0",
+  "version": "1.0.1",
   "description": "Pi extension: intercept auto-write/edit, education & supervisor modes",
   "license": "MIT",
   "type": "module",
   "main": "index.ts",
-  "keywords": ["pi", "pi-extension", "no-autowrite", "education"],
+  "keywords": ["pi", "pi-package", "pi-extension", "no-autowrite", "education", "supervisor"],
+  "repository": "github.com/CudtMFrag/pi-no-autowrite",
   "pi": {
     "extensions": [
       "./index.ts"
